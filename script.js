@@ -1,25 +1,26 @@
 const socket = io();
-let me = JSON.parse(localStorage.getItem('tg_v2'));
+let me = JSON.parse(localStorage.getItem('tg_final'));
 let activeChat = null;
 
 if (me) socket.emit('auth', me);
 
 function auth() {
-    const data = { username: document.getElementById('l-u').value, password: document.getElementById('l-p').value };
+    const data = { username: document.getElementById('u').value, password: document.getElementById('p').value };
     socket.emit('auth', data);
     me = data;
 }
 
 socket.on('auth_success', (data) => {
     me = {...me, ...data};
-    localStorage.setItem('tg_v2', JSON.stringify(me));
-    document.getElementById('auth-layer').classList.add('hidden');
-    document.getElementById('app-container').classList.remove('hidden');
-    document.getElementById('dr-nick').innerText = me.nickname;
-    document.getElementById('dr-user').innerText = "@" + me.username;
+    localStorage.setItem('tg_final', JSON.stringify(me));
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('my-nick').innerText = me.nickname;
+    document.getElementById('my-user').innerText = "@" + me.username;
+    document.getElementById('my-ava').innerText = me.nickname[0];
 });
 
-function toggleDrawer() { document.getElementById('side-drawer').classList.toggle('active'); }
+function toggleDr() { document.getElementById('drawer').classList.toggle('open'); }
 
 function doSearch() {
     const q = document.getElementById('g-search').value;
@@ -30,11 +31,11 @@ socket.on('search_results', (users) => {
     const list = document.getElementById('chat-list');
     list.innerHTML = '';
     users.forEach(u => {
-        const item = document.createElement('div');
-        item.className = 'chat-item';
-        item.onclick = () => openChat(u.username, u.nickname);
-        item.innerHTML = `<div class="avatar">${u.avatar}</div><div><b>${u.nickname}</b><br><small>@${u.username}</small></div>`;
-        list.appendChild(item);
+        const div = document.createElement('div');
+        div.className = 'chat-item';
+        div.onclick = () => openChat(u.username, u.nickname);
+        div.innerHTML = `<div class="ava">${u.avatar}</div><div><b>${u.nickname}</b><br><small>@${u.username}</small></div>`;
+        list.appendChild(div);
     });
 });
 
@@ -46,18 +47,16 @@ function openChat(user, nick) {
 }
 
 function send() {
-    const text = document.getElementById('m-input').value;
+    const text = document.getElementById('m-in').value;
     if (!text || !activeChat) return;
-    const msg = { from: me.username, to: activeChat, text, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
-    socket.emit('send_msg', msg);
-    document.getElementById('m-input').value = '';
+    socket.emit('send_msg', { from: me.username, to: activeChat, text });
+    document.getElementById('m-in').value = '';
 }
 
 socket.on('render_msg', (data) => {
     if (activeChat === data.from || activeChat === data.to) {
-        const type = data.from === me.username ? 'out' : 'in';
-        document.getElementById('messages').innerHTML += `
-            <div class="bubble ${type}">${data.text}<span class="time">${data.time}</span></div>`;
+        const side = data.from === me.username ? 'out' : 'in';
+        document.getElementById('messages').innerHTML += `<div class="bubble ${side}">${data.text}<span class="time">${data.time}</span></div>`;
         const m = document.getElementById('messages');
         m.scrollTop = m.scrollHeight;
     }
