@@ -2,53 +2,55 @@ const socket = io();
 let me = null;
 
 function auth() {
-    const user = document.getElementById('login-user').value;
-    const pass = document.getElementById('login-pass').value;
-    if(!user || !pass) return alert("Заполни поля!");
-    socket.emit('auth', { username: user, password: pass });
+    const u = document.getElementById('log-u').value;
+    const p = document.getElementById('log-p').value;
+    socket.emit('auth', { username: u, password: p });
 }
 
-socket.on('auth_success', (userData) => {
-    me = userData;
+socket.on('auth_success', (data) => {
+    me = data;
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
-    if(me.role === 'admin') document.getElementById('admin-nav').classList.remove('hidden');
-    updateUI();
+    if(me.role === 'admin') document.getElementById('adm-btn').classList.remove('hidden');
+    renderUI();
 });
 
-function updateUI() {
-    document.getElementById('u-nick').innerText = me.nickname;
-    document.getElementById('u-id').innerText = me.id ? `ID: ${me.id}` : "ID не назначен";
-    document.getElementById('u-subs').innerText = me.subs;
-    document.getElementById('u-views').innerText = me.views;
-    document.getElementById('u-reac').innerText = me.reactions;
-
-    const wall = document.getElementById('nft-wall');
-    wall.innerHTML = '';
-    me.nft.forEach(url => wall.innerHTML += `<img src="${url}" class="nft-item">`);
+function tab(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    document.getElementById(name + '-tab').classList.remove('hidden');
 }
 
-function showSection(id) {
-    document.querySelectorAll('.content-block').forEach(s => s.classList.add('hidden'));
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-    document.getElementById(id + '-section').classList.remove('hidden');
+function renderUI() {
+    document.getElementById('me-nick').innerText = me.nickname;
+    document.getElementById('me-id').innerText = me.id ? `ID: ${me.id}` : "Номер не выдан";
+    document.getElementById('me-subs').innerText = me.subs;
+    document.getElementById('me-views').innerText = me.views;
+    document.getElementById('me-reac').innerText = me.reactions;
+    
+    const nftBox = document.getElementById('nft-container');
+    nftBox.innerHTML = '';
+    me.nft.forEach(img => nftBox.innerHTML += `<img src="${img}" class="nft-pic">`);
 }
 
-function adminSet(type) {
-    const target = document.getElementById('adm-user').value;
-    const val = document.getElementById('adm-val').value;
-    socket.emit('admin_action', { 
-        adminPass: '565811', 
-        type: type, 
-        targetUser: target, 
-        val: val,
-        nftUrl: val
-    });
+function changePass() {
+    const np = document.getElementById('new-pass').value;
+    socket.emit('change_password', { username: me.username, newPass: np });
+    alert("Пароль успешно обновлен!");
 }
 
-socket.on('update_profile', (data) => {
-    if(me && data.username === me.username) {
-        me = data.data;
-        updateUI();
-    }
+function createChan() {
+    const name = document.getElementById('c-name').value;
+    socket.emit('create_channel', { name, owner: me.username });
+    alert("Канал создан!");
+}
+
+function adm(type) {
+    const target = document.getElementById('a-target').value;
+    const val = document.getElementById('a-val').value;
+    socket.emit('admin_action', { adminPass: '565811', type, targetUser: target, val });
+}
+
+socket.on('update_me', (data) => {
+    me = { ...me, ...data };
+    renderUI();
 });
