@@ -3,67 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BROKE Premium</title>
+    <title>BROKE OS</title>
     <link rel="stylesheet" href="style.css">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-    <div id="auth-screen" class="full-screen">
-        <div class="glass-card">
-            <h1 class="logo-text">BROKE</h1>
-            <input type="text" id="login-user" placeholder="Юзернейм">
-            <input type="password" id="login-pass" placeholder="Пароль">
-            <button class="glow-btn" onclick="auth()">Войти / Регистрация</button>
+    <div id="auth-screen" class="overlay">
+        <div class="auth-card">
+            <h1 class="glitch" data-text="BROKE">BROKE</h1>
+            <div class="input-group">
+                <input type="text" id="login-user" placeholder="Логин">
+                <input type="password" id="login-pass" placeholder="Пароль">
+            </div>
+            <button onclick="auth()" class="btn-primary">ПОДКЛЮЧИТЬСЯ</button>
         </div>
     </div>
 
-    <div id="main-app" class="app-container hidden">
-        <nav class="side-menu">
-            <div class="user-preview">
-                <img id="my-avatar-mini" src="https://ui-avatars.com/api/?name=U">
+    <div id="main-app" class="app-layout hidden">
+        <aside class="sidebar">
+            <div class="nav-links">
+                <button onclick="showSection('profile')" class="nav-item active">👤 Профиль</button>
+                <button onclick="showSection('search')" class="nav-item">🔍 Поиск</button>
+                <button onclick="showSection('channels')" class="nav-item">📢 Каналы</button>
+                <button id="admin-nav" class="nav-item admin-only hidden" onclick="showSection('admin')">⚡ АДМИН</button>
             </div>
-            <button onclick="showSection('profile')">👤 Профиль</button>
-            <button onclick="showSection('search')">🔍 Поиск</button>
-            <button onclick="showSection('channels')">📢 Каналы</button>
-            <button id="admin-nav" class="admin-only hidden" onclick="showSection('admin')">⚡ Админ-панель</button>
-        </nav>
+            <button onclick="location.reload()" class="logout-btn">Выход</button>
+        </aside>
 
-        <main class="content-area">
-            <section id="profile-section" class="section">
-                <div class="profile-card">
-                    <h2 id="disp-nickname">Username</h2>
-                    <p id="disp-id">ID: ---</p>
-                    <div class="edit-box">
-                        <input type="text" id="new-username" placeholder="Сменить юзернейм">
-                        <button onclick="updateProfileData()">Обновить</button>
+        <main class="viewport">
+            <section id="profile-section" class="content-block">
+                <div class="profile-header">
+                    <div class="avatar-wrapper">
+                        <img id="my-avatar" src="https://ui-avatars.com/api/?background=random">
                     </div>
-                    <div id="nft-list" class="nft-grid"></div>
+                    <div class="user-meta">
+                        <h2 id="u-nick">User</h2>
+                        <span id="u-id" class="id-tag">ID: ---</span>
+                    </div>
                 </div>
+                <div class="stats-bar">
+                    <div class="stat"><span>👥</span> <b id="u-subs">0</b></div>
+                    <div class="stat"><span>👁️</span> <b id="u-views">0</b></div>
+                    <div class="stat"><span>🔥</span> <b id="u-reac">0</b></div>
+                </div>
+                <div class="edit-profile">
+                    <h3>Настройки</h3>
+                    <input type="text" id="edit-nick" placeholder="Изменить никнейм">
+                    <button onclick="saveProfile()" class="btn-small">Сохранить</button>
+                </div>
+                <div id="nft-wall" class="nft-grid"></div>
             </section>
 
-            <section id="search-section" class="section hidden">
-                <h2>Поиск пользователей</h2>
-                <input type="text" id="search-input" placeholder="Введите @username...">
-                <button onclick="searchUser()">Найти</button>
-                <div id="search-result"></div>
+            <section id="search-section" class="content-block hidden">
+                <h2>Поиск в сети</h2>
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Введите юзернейм...">
+                    <button onclick="searchUser()">Искать</button>
+                </div>
+                <div id="search-results"></div>
             </section>
 
-            <section id="channels-section" class="section hidden">
-                <h2>Создать канал</h2>
-                <input type="text" id="chan-name" placeholder="Название канала">
-                <button class="glow-btn" onclick="createChannel()">Создать канал</button>
-            </section>
-
-            <section id="admin-section" class="section hidden">
-                <h2 class="admin-title">⚡ Накрутка и Управление</h2>
-                <div class="admin-grid">
-                    <input type="text" id="adm-target" placeholder="Юзернейм цели">
-                    <button onclick="adminAction('set_id')">Выдать номер (ID)</button>
-                    <button onclick="adminAction('gift_nft')">Выдать NFT (по ссылке)</button>
-                    <hr>
-                    <button onclick="adminAction('boost_subs')">🚀 Накрутить подписчиков</button>
-                    <button onclick="adminAction('boost_views')">👁️ Накрутить просмотры</button>
-                    <button onclick="adminAction('boost_reac')">🔥 Накрутить реакции</button>
+            <section id="admin-section" class="content-block hidden">
+                <h2 class="danger-text">System Control Panel</h2>
+                <div class="admin-panel">
+                    <input type="text" id="adm-user" placeholder="Цель (Username)">
+                    <div class="admin-actions">
+                        <button onclick="adminSet('set_id')">Сетнуть ID</button>
+                        <button onclick="adminSet('gift_nft')">Дать NFT (URL)</button>
+                        <button onclick="adminSet('boost_subs')" class="boost">🚀 Накрутить Subs</button>
+                        <button onclick="adminSet('boost_views')" class="boost">👁️ Накрутить Views</button>
+                        <button onclick="adminSet('boost_reac')" class="boost">🔥 Накрутить Reac</button>
+                    </div>
+                    <input type="text" id="adm-val" placeholder="Значение (кол-во или ID)">
                 </div>
             </section>
         </main>
