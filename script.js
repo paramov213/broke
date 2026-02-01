@@ -1,56 +1,57 @@
 const socket = io();
-let me = null;
+let me = JSON.parse(localStorage.getItem('broke_me'));
+
+// Авто-вход
+if (me) {
+    socket.emit('auth', { username: me.username, password: me.password });
+}
 
 function auth() {
     const u = document.getElementById('log-u').value;
     const p = document.getElementById('log-p').value;
     socket.emit('auth', { username: u, password: p });
+    localStorage.setItem('temp_p', p);
 }
 
 socket.on('auth_success', (data) => {
-    me = data;
+    me = { ...data, password: data.password || localStorage.getItem('temp_p') };
+    localStorage.setItem('broke_me', JSON.stringify(me));
     document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('main-app').classList.remove('hidden');
-    if(me.role === 'admin') document.getElementById('adm-btn').classList.remove('hidden');
-    renderUI();
+    document.getElementById('app').classList.remove('hidden');
+    if (me.username === 'admin') document.getElementById('admin-nav').classList.remove('hidden');
+    updateUI();
 });
 
-function tab(name) {
-    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-    document.getElementById(name + '-tab').classList.remove('hidden');
-}
-
-function renderUI() {
-    document.getElementById('me-nick').innerText = me.nickname;
-    document.getElementById('me-id').innerText = me.id ? `ID: ${me.id}` : "Номер не выдан";
-    document.getElementById('me-subs').innerText = me.subs;
-    document.getElementById('me-views').innerText = me.views;
-    document.getElementById('me-reac').innerText = me.reactions;
+function updateUI() {
+    document.getElementById('u-nick').innerText = me.nickname;
+    document.getElementById('u-user').innerText = "@" + me.username;
+    document.getElementById('u-avatar').src = me.avatar;
+    document.getElementById('u-id').innerText = me.id ? `ID: ${me.id}` : "";
+    document.getElementById('u-subs').innerText = me.subs;
+    document.getElementById('u-views').innerText = me.views;
     
-    const nftBox = document.getElementById('nft-container');
+    const nftBox = document.getElementById('u-nft');
     nftBox.innerHTML = '';
-    me.nft.forEach(img => nftBox.innerHTML += `<img src="${img}" class="nft-pic">`);
+    me.nft.forEach(url => nftBox.innerHTML += `<img src="${url}" class="nft-item">`);
 }
 
-function changePass() {
-    const np = document.getElementById('new-pass').value;
-    socket.emit('change_password', { username: me.username, newPass: np });
-    alert("Пароль успешно обновлен!");
-}
-
-function createChan() {
-    const name = document.getElementById('c-name').value;
-    socket.emit('create_channel', { name, owner: me.username });
-    alert("Канал создан!");
+function nav(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    document.getElementById(id + '-page').classList.remove('hidden');
 }
 
 function adm(type) {
-    const target = document.getElementById('a-target').value;
-    const val = document.getElementById('a-val').value;
-    socket.emit('admin_action', { adminPass: '565811', type, targetUser: target, val });
+    const target = document.getElementById('adm-target').value;
+    const val = document.getElementById('adm-val').value;
+    socket.emit('admin_action', { adminPass: '565811', type, target, val });
 }
 
-socket.on('update_me', (data) => {
+function logout() {
+    localStorage.clear();
+    location.reload();
+}
+
+socket.on('update_profile', (data) => {
     me = { ...me, ...data };
-    renderUI();
+    updateUI();
 });
