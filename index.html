@@ -2,65 +2,61 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Telegram Web</title>
+    <title>Telegram</title>
     <link rel="stylesheet" href="style.css">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-    <div id="auth-layer" class="layer">
-        <div class="auth-card">
+    <div id="auth-screen" class="full-center">
+        <div class="tg-auth-card">
             <div class="tg-logo"></div>
             <h1>Telegram</h1>
-            <p>Please enter your details to login.</p>
-            <input type="text" id="l-u" placeholder="Username">
-            <input type="password" id="l-p" placeholder="Password">
-            <button onclick="auth()">START MESSAGING</button>
+            <p>Введите данные для входа</p>
+            <input type="text" id="u" placeholder="Имя пользователя">
+            <input type="password" id="p" placeholder="Пароль">
+            <button onclick="auth()">ДАЛЕЕ</button>
         </div>
     </div>
 
-    <div id="app-container" class="hidden">
-        <div id="side-drawer" class="drawer">
-            <div class="drawer-user">
-                <div class="avatar" id="dr-ava">U</div>
-                <div class="dr-info">
-                    <b id="dr-nick">Name</b><br>
-                    <span id="dr-user">@user</span>
-                </div>
+    <div id="app" class="hidden">
+        <div id="drawer" class="drawer">
+            <div class="dr-top">
+                <div class="ava" id="my-ava">U</div>
+                <div id="my-nick">Name</div>
+                <div id="my-user" style="color:#708499">@user</div>
             </div>
-            <div class="drawer-menu">
-                <div class="menu-item" onclick="showSettings()">⚙️ Settings</div>
-                <div class="menu-item" onclick="logout()">🚪 Logout</div>
+            <div class="dr-list">
+                <button onclick="alert('Settings')">⚙️ Настройки</button>
+                <button onclick="location.reload()">🚪 Выход</button>
             </div>
         </div>
 
-        <aside class="tg-left">
-            <div class="tg-header">
-                <div class="burger-icon" onclick="toggleDrawer()">☰</div>
-                <input type="text" class="search-input" id="g-search" placeholder="Search" oninput="doSearch()">
-            </div>
-            <div class="tabs">
-                <div class="tab active">All Chats</div>
-                <div class="tab">Personal</div>
-            </div>
-            <div id="chat-list" class="chat-list"></div>
-        </aside>
+        <div id="tg-wrapper">
+            <aside class="sidebar">
+                <div class="search-row">
+                    <button class="burger" onclick="toggleDr()">☰</button>
+                    <input type="text" id="g-search" class="search-input" placeholder="Поиск" oninput="doSearch()">
+                </div>
+                <div id="chat-list" class="chat-list"></div>
+            </aside>
 
-        <main class="tg-main">
-            <div class="chat-info-bar">
-                <div class="avatar" id="h-ava" style="width:40px; height:40px; font-size:16px;">?</div>
-                <div style="margin-left:15px">
-                    <b id="h-nick">Select a chat</b><br>
-                    <span id="h-status" style="font-size:13px; color:#708499">online</span>
+            <main class="main-chat">
+                <div class="chat-header">
+                    <div class="ava" id="h-ava" style="width:40px; height:40px; font-size:16px;">?</div>
+                    <div style="margin-left:15px">
+                        <b id="h-nick">Выберите чат</b><br>
+                        <span id="h-status" style="font-size:13px; color:#708499">в сети</span>
+                    </div>
                 </div>
-            </div>
-            <div id="messages" class="messages-container"></div>
-            <div class="input-container">
-                <div class="input-wrapper">
-                    <input type="text" id="m-input" class="tg-msg-input" placeholder="Message">
+                <div id="messages" class="msg-area"></div>
+                <div class="tg-input-bar">
+                    <div class="input-wrap">
+                        <input type="text" id="m-in" class="tg-input" placeholder="Сообщение">
+                    </div>
+                    <button onclick="send()" style="background:none; border:none; color:#549ed9; font-size:26px; cursor:pointer;">➤</button>
                 </div>
-                <button class="send-btn" onclick="send()">➤</button>
-            </div>
-        </main>
+            </main>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
