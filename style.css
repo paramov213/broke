@@ -1,19 +1,57 @@
-:root { --main: #00e5ff; --bg: #0b0e11; --card: #151a21; }
-body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; }
+:root {
+    --tg-bg: #0e1621;
+    --tg-side: #17212b;
+    --tg-active: #2b5278;
+    --tg-text: #f5f5f5;
+    --tg-sub: #708499;
+    --tg-input: #1b2633;
+}
+
+body { background: var(--tg-bg); color: var(--tg-text); font-family: -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; }
 .hidden { display: none !important; }
 
-.screen { height: 100vh; display: flex; }
-.auth-card { margin: auto; background: var(--card); padding: 40px; border-radius: 20px; border: 1px solid var(--main); text-align: center; box-shadow: 0 0 20px rgba(0,229,255,0.2); }
+/* Весь экран приложения */
+#app { display: flex; height: 100vh; width: 100vw; }
 
-.sidebar { width: 250px; background: var(--card); padding: 20px; border-right: 1px solid #222; }
-.nav-btn { width: 100%; padding: 15px; margin: 5px 0; background: transparent; border: none; color: #ccc; border-radius: 10px; text-align: left; cursor: pointer; transition: 0.3s; }
-.nav-btn:hover { background: var(--main); color: black; }
+/* Левая колонка (Список чатов) */
+.sidebar {
+    width: 320px;
+    background: var(--tg-side);
+    border-right: 1px solid #000;
+    display: flex;
+    flex-direction: column;
+}
 
-.main-content { flex: 1; padding: 40px; overflow-y: auto; background: radial-gradient(circle at top right, #10141d, #0b0e11); }
-.avatar { width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--main); padding: 5px; }
-.nft-grid { display: grid; grid-template-columns: repeat(auto-fill, 80px); gap: 15px; margin-top: 20px; }
-.nft-item { width: 80px; height: 80px; border-radius: 10px; border: 1px solid gold; animation: float 3s infinite ease-in-out; }
+.search-container { padding: 10px; background: var(--tg-side); }
+.tg-search { width: 100%; padding: 8px; border-radius: 5px; border: none; background: #242f3d; color: white; }
 
-@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-input { width: 100%; padding: 12px; margin: 10px 0; background: #080a0c; border: 1px solid #333; color: white; border-radius: 8px; box-sizing: border-box; }
-button { cursor: pointer; }
+/* Список контактов */
+#chat-list { flex: 1; overflow-y: auto; }
+.chat-item {
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.chat-item:hover { background: #202b36; }
+.chat-item.active { background: var(--tg-active); }
+.chat-avatar { width: 45px; height: 45px; border-radius: 50%; margin-right: 15px; background: #517da2; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+
+/* Правая колонка (Окно чата) */
+.main-viewport { flex: 1; display: flex; flex-direction: column; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; }
+
+.chat-header { height: 55px; background: var(--tg-side); display: flex; align-items: center; padding: 0 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+.messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.msg-bubble { max-width: 70%; padding: 8px 12px; border-radius: 12px; font-size: 14px; position: relative; }
+.msg-in { background: #182533; align-self: flex-start; border-bottom-left-radius: 2px; }
+.msg-out { background: var(--tg-active); align-self: flex-end; border-bottom-right-radius: 2px; }
+
+/* Панель ввода */
+.input-panel { padding: 10px 20px; background: var(--tg-side); display: flex; gap: 15px; align-items: center; }
+.tg-input { flex: 1; background: transparent; border: none; color: white; font-size: 15px; outline: none; }
+
+/* Нижнее меню (фичи) */
+.bottom-nav { height: 50px; border-top: 1px solid #111; display: flex; justify-content: space-around; background: var(--tg-side); }
+.nav-icon { background: none; border: none; color: var(--tg-sub); cursor: pointer; font-size: 20px; }
+.nav-icon.active { color: #51a2e8; }
