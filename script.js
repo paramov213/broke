@@ -5,8 +5,7 @@ let currentToken = null;
 // DOM элементы
 const authScreen = document.getElementById('auth-screen');
 const mainScreen = document.getElementById('main-screen');
-const adminMenu = document.getElementById('admin-menu');
-const contentBody = document.getElementById('content-body');
+const contentArea = document.getElementById('content-area');
 const contentTitle = document.getElementById('content-title');
 
 // Проверка сохраненной сессии
@@ -20,21 +19,23 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = JSON.parse(savedUser);
             showMainApp();
         } catch (e) {
+            console.error('Error parsing saved user:', e);
             localStorage.clear();
         }
     }
 });
 
+// Функции авторизации
 function showTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.auth-form').forEach(form => form.style.display = 'none');
+    document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
     
     if (tab === 'login') {
-        document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
-        document.getElementById('login-form').style.display = 'block';
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('login-form').classList.add('active');
     } else {
-        document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
-        document.getElementById('register-form').style.display = 'block';
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('register-form').classList.add('active');
     }
 }
 
@@ -42,10 +43,17 @@ async function login() {
     const username = document.getElementById('login-username').value;
     const password = document.getElementById('login-password').value;
     
+    if (!username || !password) {
+        showNotification('Введите имя пользователя и пароль', 'error');
+        return;
+    }
+    
     try {
         const response = await fetch('/api/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({ username, password })
         });
         
@@ -57,21 +65,23 @@ async function login() {
             localStorage.setItem('broke_token', data.token);
             localStorage.setItem('broke_user', JSON.stringify(data.user));
             showMainApp();
+            showNotification('Успешный вход!');
         } else {
-            alert(data.error || 'Ошибка входа');
+            showNotification(data.error || 'Ошибка входа', 'error');
         }
     } catch (error) {
-        alert('Ошибка соединения');
+        console.error('Login error:', error);
+        showNotification('Ошибка соединения с сервером', 'error');
     }
 }
 
 async function register() {
-    const username = document.getElementById('reg-username').value;
-    const nickname = document.getElementById('reg-nickname').value;
-    const password = document.getElementById('reg-password').value;
+    const username = document.getElementById('register-username').value;
+    const nickname = document.getElementById('register-nickname').value;
+    const password = document.getElementById('register-password').value;
     
     if (!username || !password) {
-        alert('Заполните все поля');
+        showNotification('Заполните все обязательные поля', 'error');
         return;
     }
     
@@ -90,11 +100,13 @@ async function register() {
             localStorage.setItem('broke_token', data.token);
             localStorage.setItem('broke_user', JSON.stringify(data.user));
             showMainApp();
+            showNotification('Регистрация успешна!');
         } else {
-            alert(data.error || 'Ошибка регистрации');
+            showNotification(data.error || 'Ошибка регистрации', 'error');
         }
     } catch (error) {
-        alert('Ошибка соединения');
+        console.error('Registration error:', error);
+        showNotification('Ошибка соединения с сервером', 'error');
     }
 }
 
@@ -103,14 +115,14 @@ function showMainApp() {
     mainScreen.style.display = 'flex';
     
     // Обновляем информацию пользователя
-    document.getElementById('user-avatar').textContent = 
+    document.getElementById('main-avatar').textContent = 
         currentUser.nickname ? currentUser.nickname.charAt(0).toUpperCase() : currentUser.username.charAt(0).toUpperCase();
-    document.getElementById('user-nickname').textContent = currentUser.nickname || currentUser.username;
-    document.getElementById('user-username').textContent = `@${currentUser.username}`;
+    document.getElementById('main-nickname').textContent = currentUser.nickname || currentUser.username;
+    document.getElementById('main-username').textContent = `@${currentUser.username}`;
     
     // Показываем админ-меню если это админ
     if (currentUser.username === 'admin') {
-        adminMenu.style.display = 'flex';
+        document.querySelector('.admin-only').style.display = 'flex';
     }
     
     // Инициализируем сокет
@@ -133,167 +145,214 @@ function initSocket() {
     });
     
     socket.on('nft_received', (data) => {
-        showNotification('Вы получили NFT подарок!');
+        showNotification('🎁 Вы получили NFT подарок!');
+        // Обновляем профиль если открыт
+        if (document.querySelector('.section.active')?.id === 'profile-section') {
+            loadUserProfile();
+        }
+    });
+    
+    socket.on('nft_error', (data) => {
+        showNotification(data.error || 'Ошибка отправки NFT', 'error');
+    });
+    
+    socket.on('nft_sent', (data) => {
+        showNotification('NFT успешно отправлен!');
     });
 }
 
-function showSection(section) {
+// Навигация
+function showSection(sectionId) {
     // Обновляем активный пункт меню
-    document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
-    event.target.closest('.menu-item').classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    event.target.closest('.nav-item').classList.add('active');
     
     // Загружаем контент
-    switch(section) {
+    switch(sectionId) {
         case 'chats':
             contentTitle.textContent = 'Чаты';
-            contentBody.innerHTML = `
-                <div class="chat-list">
-                    <div class="chat-item">
-                        <div class="avatar" style="background: #4CAF50;">A</div>
-                        <div>
-                            <div class="chat-name">Alex</div>
-                            <div class="chat-last-msg">Привет! Как дела?</div>
+            contentArea.innerHTML = `
+                <div class="section active" id="chats-section">
+                    <div class="chats-list">
+                        <div class="chat-item">
+                            <div class="avatar">T</div>
+                            <div class="chat-info">
+                                <h4>Тестовый пользователь</h4>
+                                <p>Привет! Добро пожаловать в BROKE!</p>
+                            </div>
+                            <div class="chat-time">12:30</div>
                         </div>
                     </div>
-                    <div class="chat-item">
-                        <div class="avatar" style="background: #2196F3;">M</div>
-                        <div>
-                            <div class="chat-name">Maria</div>
-                            <div class="chat-last-msg">Посмотри это видео</div>
-                        </div>
+                    <div class="chat-input">
+                        <input type="text" placeholder="Введите сообщение...">
+                        <button class="btn btn-primary">Отправить</button>
                     </div>
-                </div>
-                <div class="message-input">
-                    <input type="text" placeholder="Напишите сообщение...">
-                    <button class="btn primary">Отправить</button>
                 </div>
             `;
             break;
             
         case 'search':
             contentTitle.textContent = 'Поиск пользователей';
-            contentBody.innerHTML = `
-                <div class="search-box">
-                    <input type="text" id="search-input" placeholder="Введите имя пользователя">
-                    <button class="btn primary" onclick="searchUser()">Найти</button>
+            contentArea.innerHTML = `
+                <div class="section active" id="search-section">
+                    <div class="search-container">
+                        <div class="search-box">
+                            <input type="text" id="search-username" placeholder="Введите имя пользователя">
+                            <button class="btn btn-primary" onclick="searchUser()">Найти</button>
+                        </div>
+                        <div id="search-results" class="search-results"></div>
+                    </div>
                 </div>
-                <div id="search-results"></div>
             `;
             break;
             
         case 'channels':
             contentTitle.textContent = 'Каналы';
-            contentBody.innerHTML = `
-                <div class="search-box">
-                    <input type="text" id="channel-search" placeholder="Поиск каналов">
-                    <button class="btn primary" onclick="searchChannel()">Найти</button>
-                </div>
-                <button class="btn primary" onclick="showSection('create_channel')" style="margin-top: 20px;">
-                    <i class="fas fa-plus"></i> Создать канал
-                </button>
-            `;
-            break;
-            
-        case 'create_channel':
-            contentTitle.textContent = 'Создать канал';
-            contentBody.innerHTML = `
-                <div class="profile-form">
-                    <input type="text" id="channel-name" placeholder="Название канала">
-                    <input type="text" id="channel-username" placeholder="Username канала">
-                    <button class="btn primary" onclick="createChannel()">Создать канал</button>
+            contentArea.innerHTML = `
+                <div class="section active" id="channels-section">
+                    <div style="margin-bottom: 30px;">
+                        <h3>Создать канал</h3>
+                        <div class="search-box">
+                            <input type="text" id="channel-name" placeholder="Название канала">
+                            <input type="text" id="channel-username" placeholder="Username канала">
+                            <button class="btn btn-primary" onclick="createChannel()">Создать</button>
+                        </div>
+                    </div>
+                    <div>
+                        <h3>Найти канал</h3>
+                        <div class="search-box">
+                            <input type="text" id="search-channel" placeholder="Username канала">
+                            <button class="btn btn-primary" onclick="searchChannel()">Найти</button>
+                        </div>
+                    </div>
                 </div>
             `;
             break;
             
         case 'nft':
             contentTitle.textContent = 'NFT Подарки';
-            contentBody.innerHTML = `
-                <div class="nft-grid">
-                    <div class="nft-card" onclick="sendNFT(1)">
-                        <div class="nft-icon">🏆</div>
-                        <h4>Gold Trophy</h4>
-                        <p>Легендарный</p>
-                        <button class="btn primary" style="margin-top: 10px;">Отправить</button>
+            contentArea.innerHTML = `
+                <div class="section active" id="nft-section">
+                    <h3>Мои NFT</h3>
+                    <div id="my-nfts" class="nft-grid"></div>
+                    
+                    <h3 style="margin-top: 40px;">Отправить NFT подарок</h3>
+                    <div style="margin-bottom: 30px;">
+                        <div class="search-box">
+                            <input type="text" id="nft-receiver" placeholder="Имя пользователя получателя">
+                            <select id="nft-select">
+                                <option value="1">🏆 Gold Trophy</option>
+                                <option value="2">⭐ Silver Star</option>
+                                <option value="3">🥉 Bronze Medal</option>
+                                <option value="4">💎 Diamond</option>
+                                <option value="5">❤️‍🔥 Fire Heart</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="sendNFT()">Отправить</button>
+                        </div>
                     </div>
-                    <div class="nft-card" onclick="sendNFT(2)">
-                        <div class="nft-icon">⭐</div>
-                        <h4>Silver Star</h4>
-                        <p>Эпический</p>
-                        <button class="btn primary" style="margin-top: 10px;">Отправить</button>
-                    </div>
-                    <div class="nft-card" onclick="sendNFT(3)">
-                        <div class="nft-icon">🥉</div>
-                        <h4>Bronze Medal</h4>
-                        <p>Редкий</p>
-                        <button class="btn primary" style="margin-top: 10px;">Отправить</button>
-                    </div>
-                </div>
-                <div style="margin-top: 30px;">
-                    <h3>Отправить подарок</h3>
-                    <div class="search-box">
-                        <input type="text" id="nft-receiver" placeholder="Имя пользователя">
-                        <button class="btn primary" onclick="sendSelectedNFT()">Отправить выбранный NFT</button>
+                    
+                    <h3>Доступные NFT</h3>
+                    <div id="all-nfts" class="nft-grid">
+                        <div class="nft-card legendary" onclick="selectNFT(1)">
+                            <div class="nft-icon">🏆</div>
+                            <div class="nft-name">Gold Trophy</div>
+                            <div class="nft-rarity">Легендарный</div>
+                        </div>
+                        <div class="nft-card epic" onclick="selectNFT(2)">
+                            <div class="nft-icon">⭐</div>
+                            <div class="nft-name">Silver Star</div>
+                            <div class="nft-rarity">Эпический</div>
+                        </div>
+                        <div class="nft-card rare" onclick="selectNFT(3)">
+                            <div class="nft-icon">🥉</div>
+                            <div class="nft-name">Bronze Medal</div>
+                            <div class="nft-rarity">Редкий</div>
+                        </div>
                     </div>
                 </div>
             `;
+            loadUserNFTs();
             break;
             
         case 'profile':
             contentTitle.textContent = 'Мой профиль';
-            contentBody.innerHTML = `
-                <div class="profile-form">
-                    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px;">
-                        <div class="avatar" style="width: 80px; height: 80px; font-size: 32px;">
+            contentArea.innerHTML = `
+                <div class="section active" id="profile-section">
+                    <div class="profile-container">
+                        <div class="profile-avatar" id="profile-avatar">
                             ${currentUser.nickname ? currentUser.nickname.charAt(0).toUpperCase() : currentUser.username.charAt(0).toUpperCase()}
                         </div>
-                        <div>
-                            <h3>${currentUser.nickname || currentUser.username}</h3>
-                            <p>@${currentUser.username}</p>
-                            ${currentUser.admin_id ? `<p><strong>ID:</strong> ${currentUser.admin_id}</p>` : ''}
+                        
+                        <div class="profile-form">
+                            <div class="form-group">
+                                <label>Имя пользователя</label>
+                                <input type="text" value="@${currentUser.username}" disabled>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Ваше имя</label>
+                                <input type="text" id="profile-nickname" value="${currentUser.nickname || ''}" placeholder="Введите ваше имя">
+                            </div>
+                            
+                            ${currentUser.admin_id ? `
+                            <div class="form-group">
+                                <label>ID номер</label>
+                                <input type="text" value="${currentUser.admin_id}" disabled>
+                            </div>
+                            ` : ''}
+                            
+                            <div class="form-group">
+                                <label>О себе</label>
+                                <textarea id="profile-bio" placeholder="Расскажите о себе...">${currentUser.bio || ''}</textarea>
+                            </div>
+                            
+                            <button class="btn btn-primary" onclick="updateProfile()">Сохранить изменения</button>
                         </div>
+                        
+                        <h3 style="margin-top: 40px;">Мои NFT подарки</h3>
+                        <div id="profile-nfts" class="nft-grid"></div>
                     </div>
-                    
-                    <input type="text" id="profile-nickname" value="${currentUser.nickname || ''}" placeholder="Ваше имя">
-                    <textarea id="profile-bio" placeholder="Расскажите о себе...">${currentUser.bio || ''}</textarea>
-                    <button class="btn primary" onclick="updateProfile()">Сохранить</button>
                 </div>
             `;
+            loadUserNFTsForProfile();
             break;
             
         case 'admin':
             contentTitle.textContent = 'Админ-панель';
-            contentBody.innerHTML = `
-                <div class="admin-section">
-                    <h3>Выдать NFT пользователю</h3>
-                    <div class="admin-controls">
-                        <input type="text" id="admin-user" placeholder="Имя пользователя">
-                        <select id="admin-nft">
-                            <option value="1">🏆 Gold Trophy</option>
-                            <option value="2">⭐ Silver Star</option>
-                            <option value="3">🥉 Bronze Medal</option>
-                            <option value="4">💎 Diamond</option>
-                            <option value="5">❤️‍🔥 Fire Heart</option>
-                        </select>
-                        <button class="btn primary" onclick="adminGiveNFT()">Выдать</button>
+            contentArea.innerHTML = `
+                <div class="section active" id="admin-section">
+                    <div class="admin-section">
+                        <h3>Выдать NFT пользователю</h3>
+                        <div class="admin-controls">
+                            <input type="text" id="admin-give-user" placeholder="Имя пользователя">
+                            <select id="admin-give-nft">
+                                <option value="1">🏆 Gold Trophy</option>
+                                <option value="2">⭐ Silver Star</option>
+                                <option value="3">🥉 Bronze Medal</option>
+                                <option value="4">💎 Diamond</option>
+                                <option value="5">❤️‍🔥 Fire Heart</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="adminGiveNFT()">Выдать NFT</button>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="admin-section">
-                    <h3>Буст канала</h3>
-                    <div class="admin-controls">
-                        <input type="text" id="boost-channel" placeholder="Username канала">
-                        <input type="number" id="boost-views" placeholder="Просмотры" value="1000">
-                        <input type="number" id="boost-subs" placeholder="Подписчики" value="100">
-                        <button class="btn primary" onclick="adminBoostChannel()">Буст</button>
+                    
+                    <div class="admin-section">
+                        <h3>Буст канала</h3>
+                        <div class="admin-controls">
+                            <input type="text" id="boost-channel-name" placeholder="Username канала">
+                            <input type="number" id="boost-views" placeholder="Просмотры" value="1000">
+                            <input type="number" id="boost-subs" placeholder="Подписчики" value="100">
+                            <button class="btn btn-primary" onclick="adminBoostChannel()">Бустнуть канал</button>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="admin-section">
-                    <h3>Выдать ID номер</h3>
-                    <div class="admin-controls">
-                        <input type="text" id="assign-user" placeholder="Имя пользователя">
-                        <input type="text" id="assign-id" placeholder="ID номер">
-                        <button class="btn primary" onclick="adminAssignID()">Выдать ID</button>
+                    
+                    <div class="admin-section">
+                        <h3>Выдать ID номер</h3>
+                        <div class="admin-controls">
+                            <input type="text" id="assign-id-user" placeholder="Имя пользователя">
+                            <input type="text" id="assign-id-number" placeholder="ID номер">
+                            <button class="btn btn-primary" onclick="adminAssignID()">Выдать ID</button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -301,12 +360,13 @@ function showSection(section) {
     }
 }
 
+// Поиск пользователей
 async function searchUser() {
-    const username = document.getElementById('search-input').value;
+    const username = document.getElementById('search-username').value;
     const resultsDiv = document.getElementById('search-results');
     
     if (!username) {
-        resultsDiv.innerHTML = '<p>Введите имя пользователя</p>';
+        resultsDiv.innerHTML = '<p style="color: var(--gray); text-align: center;">Введите имя пользователя для поиска</p>';
         return;
     }
     
@@ -315,75 +375,157 @@ async function searchUser() {
         if (response.ok) {
             const user = await response.json();
             resultsDiv.innerHTML = `
-                <div class="chat-item">
-                    <div class="avatar">${user.nickname ? user.nickname.charAt(0).toUpperCase() : user.username.charAt(0).toUpperCase()}</div>
-                    <div>
-                        <div class="chat-name">${user.nickname || user.username}</div>
-                        <div class="username">@${user.username}</div>
-                        ${user.bio ? `<p>${user.bio}</p>` : ''}
-                        <button class="btn primary" onclick="startChat(${user.id})">Написать</button>
+                <div class="user-result">
+                    <div class="avatar" style="background: linear-gradient(135deg, var(--primary), var(--secondary));">
+                        ${user.nickname ? user.nickname.charAt(0).toUpperCase() : user.username.charAt(0).toUpperCase()}
                     </div>
+                    <div style="flex: 1;">
+                        <h4>${user.nickname || user.username}</h4>
+                        <p>@${user.username}</p>
+                        ${user.bio ? `<p style="margin-top: 5px; color: var(--gray);">${user.bio}</p>` : ''}
+                    </div>
+                    <button class="btn btn-primary" onclick="startChat(${user.id})">Написать</button>
                 </div>
             `;
         } else {
-            resultsDiv.innerHTML = '<p>Пользователь не найден</p>';
+            resultsDiv.innerHTML = '<p style="color: var(--danger); text-align: center;">Пользователь не найден</p>';
         }
     } catch (error) {
-        resultsDiv.innerHTML = '<p>Ошибка поиска</p>';
+        console.error('Search error:', error);
+        resultsDiv.innerHTML = '<p style="color: var(--danger); text-align: center;">Ошибка поиска</p>';
     }
 }
 
-function sendNFT(nftId) {
-    window.selectedNFT = nftId;
-    document.getElementById('nft-receiver').focus();
+// NFT функции
+function selectNFT(nftId) {
+    document.getElementById('nft-select').value = nftId;
 }
 
-function sendSelectedNFT() {
+async function sendNFT() {
     const receiver = document.getElementById('nft-receiver').value;
-    const nftId = window.selectedNFT || 1;
+    const nftId = document.getElementById('nft-select').value;
     
     if (!receiver) {
-        alert('Введите имя пользователя');
+        showNotification('Введите имя пользователя получателя', 'error');
         return;
     }
     
     if (socket) {
         socket.emit('send_nft', {
             receiver_username: receiver,
-            nft_id: nftId
+            nft_id: parseInt(nftId)
         });
-        alert(`NFT отправлен пользователю @${receiver}`);
     }
 }
 
+async function loadUserNFTs() {
+    try {
+        const response = await fetch(`/api/user/${currentUser.username}`);
+        if (response.ok) {
+            const user = await response.json();
+            const myNftsDiv = document.getElementById('my-nfts');
+            
+            if (user.nfts && user.nfts.length > 0) {
+                myNftsDiv.innerHTML = user.nfts.map(nft => `
+                    <div class="nft-card ${nft.rarity}">
+                        <div class="nft-icon">${nft.image_url}</div>
+                        <div class="nft-name">${nft.name}</div>
+                        <div class="nft-rarity">${getRarityName(nft.rarity)}</div>
+                    </div>
+                `).join('');
+            } else {
+                myNftsDiv.innerHTML = '<p style="color: var(--gray); text-align: center;">У вас еще нет NFT подарков</p>';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading NFTs:', error);
+    }
+}
+
+async function loadUserNFTsForProfile() {
+    try {
+        const response = await fetch(`/api/user/${currentUser.username}`);
+        if (response.ok) {
+            const user = await response.json();
+            const profileNftsDiv = document.getElementById('profile-nfts');
+            
+            if (user.nfts && user.nfts.length > 0) {
+                profileNftsDiv.innerHTML = user.nfts.map(nft => `
+                    <div class="nft-card ${nft.rarity}">
+                        <div class="nft-icon">${nft.image_url}</div>
+                        <div class="nft-name">${nft.name}</div>
+                        <div class="nft-rarity">${getRarityName(nft.rarity)}</div>
+                    </div>
+                `).join('');
+            } else {
+                profileNftsDiv.innerHTML = '<p style="color: var(--gray); text-align: center;">У вас еще нет NFT подарков</p>';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading profile NFTs:', error);
+    }
+}
+
+function getRarityName(rarity) {
+    const names = {
+        'legendary': 'Легендарный',
+        'epic': 'Эпический',
+        'rare': 'Редкий'
+    };
+    return names[rarity] || rarity;
+}
+
+// Админ функции
 function adminGiveNFT() {
-    const username = document.getElementById('admin-user').value;
-    const nftId = document.getElementById('admin-nft').value;
+    const username = document.getElementById('admin-give-user').value;
+    const nftId = document.getElementById('admin-give-nft').value;
     
-    if (username && socket && currentUser.username === 'admin') {
+    if (!username) {
+        showNotification('Введите имя пользователя', 'error');
+        return;
+    }
+    
+    if (socket && currentUser.username === 'admin') {
         socket.emit('send_nft', {
             receiver_username: username,
             nft_id: parseInt(nftId)
         });
-        alert(`NFT выдан пользователю @${username}`);
+        showNotification(`NFT отправлен пользователю @${username}`);
     }
 }
 
-function showNotification(message) {
-    // Создаем уведомление
+function adminBoostChannel() {
+    const channelName = document.getElementById('boost-channel-name').value;
+    const views = document.getElementById('boost-views').value;
+    const subs = document.getElementById('boost-subs').value;
+    
+    if (!channelName) {
+        showNotification('Введите имя канала', 'error');
+        return;
+    }
+    
+    showNotification(`Канал @${channelName} бустнут на ${views} просмотров и ${subs} подписчиков`);
+}
+
+function adminAssignID() {
+    const username = document.getElementById('assign-id-user').value;
+    const idNumber = document.getElementById('assign-id-number').value;
+    
+    if (!username || !idNumber) {
+        showNotification('Введите имя пользователя и ID номер', 'error');
+        return;
+    }
+    
+    showNotification(`ID номер ${idNumber} выдан пользователю @${username}`);
+}
+
+// Вспомогательные функции
+function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
+    notification.className = 'notification';
     notification.textContent = message;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        padding: 15px 25px;
-        border-radius: 10px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        z-index: 1000;
-    `;
+    notification.style.background = type === 'error' ? 'linear-gradient(135deg, var(--danger), #dc2626)' : 
+                                 'linear-gradient(135deg, var(--primary), var(--primary-dark))';
     
     document.body.appendChild(notification);
     
