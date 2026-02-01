@@ -1,20 +1,19 @@
 const socket = io();
-let currentUser = null;
+let myUser = null;
 
 function auth() {
-    const user = document.getElementById('login-user').value;
+    const username = document.getElementById('login-user').value;
     const pass = document.getElementById('login-pass').value;
-    socket.emit('auth', { username: user, password: pass });
+    socket.emit('auth', { username, password: pass });
 }
 
-socket.on('auth_success', (userData) => {
-    currentUser = userData;
+socket.on('auth_success', (data) => {
+    myUser = data;
     document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('nav-menu').classList.remove('hidden');
-    document.getElementById('profile-section').classList.remove('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
     
-    if(currentUser.username === 'admin') {
-        document.getElementById('admin-btn').classList.remove('hidden');
+    if(myUser.username === 'admin') {
+        document.getElementById('admin-nav').classList.remove('hidden');
     }
     updateUI();
 });
@@ -24,28 +23,30 @@ function showSection(id) {
     document.getElementById(id + '-section').classList.remove('hidden');
 }
 
-function updateUI() {
-    document.getElementById('disp-nickname').innerText = currentUser.nickname;
-    document.getElementById('disp-id').innerText = currentUser.id ? "ID: " + currentUser.id : "ID не назначен";
-    
-    const container = document.getElementById('nft-container');
-    container.innerHTML = '';
-    currentUser.nft.forEach(url => {
-        container.innerHTML += `<img src="${url}" class="nft-item">`;
-    });
+// Поиск пользователя
+function searchUser() {
+    const query = document.getElementById('search-input').value;
+    // В реальном приложении здесь socket.emit('find_user', query)
+    document.getElementById('search-result').innerHTML = `<div class="profile-card">Пользователь ${query} найден!</div>`;
 }
 
+// Настройка профиля
+function updateProfileData() {
+    const newName = document.getElementById('new-username').value;
+    myUser.nickname = newName;
+    updateUI();
+    // socket.emit('update_profile', myUser);
+}
+
+// Админ-функции (накрутка)
 function adminAction(type) {
     const target = document.getElementById('adm-target').value;
-    const val = (type === 'gift_nft') ? document.getElementById('adm-nft').value : document.getElementById('adm-id').value;
-    socket.emit('admin_action', { 
-        adminPass: '565811', type: type, targetUser: target, nftUrl: val, newId: val 
-    });
+    const adminPass = "565811"; // Твой пароль
+    socket.emit('admin_action', { type, targetUser: target, adminPass });
+    alert("Запрос на " + type + " отправлен!");
 }
 
-socket.on('update_profile', (data) => {
-    if(currentUser && data.username === currentUser.username) {
-        currentUser = data.data;
-        updateUI();
-    }
-});
+function updateUI() {
+    document.getElementById('disp-nickname').innerText = myUser.nickname;
+    document.getElementById('disp-id').innerText = "ID: " + (myUser.id || "Не назначен");
+}
