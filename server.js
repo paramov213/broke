@@ -13,14 +13,15 @@ const io = socketIo(server);
 
 // Middleware
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // База данных
-const db = new sqlite3.Database('./broke.db');
+const db = new sqlite3.Database(':memory:');
 
 // Инициализация БД
 db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS users (
+  // Пользователи
+  db.run(`CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE,
     password TEXT,
@@ -32,7 +33,8 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS channels (
+  // Каналы
+  db.run(`CREATE TABLE channels (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
     channel_username TEXT UNIQUE,
@@ -42,7 +44,8 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS messages (
+  // Сообщения
+  db.run(`CREATE TABLE messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sender_id INTEGER,
     receiver_id INTEGER,
@@ -52,14 +55,15 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS nfts (
+  // NFT подарки
+  db.run(`CREATE TABLE nfts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
     image_url TEXT,
     rarity TEXT
   )`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS user_nfts (
+  db.run(`CREATE TABLE user_nfts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
     nft_id INTEGER,
@@ -69,8 +73,19 @@ db.serialize(() => {
 
   // Создаем админа
   bcrypt.hash('565811', 10, (err, hash) => {
-    db.run(`INSERT OR IGNORE INTO users (username, password, nickname, admin_id) 
-            VALUES ('admin', ?, 'Administrator', 'ADMIN-001')`, [hash]);
+    if (err) {
+      console.error('Error hashing admin password:', err);
+      return;
+    }
+    
+    db.run(`INSERT INTO users (username, password, nickname, admin_id) 
+            VALUES ('admin', ?, 'Администратор', 'ADMIN-001')`, [hash], function(err) {
+      if (err) {
+        console.error('Error creating admin:', err.message);
+      } else {
+        console.log('Admin user created with ID:', this.lastID);
+      }
+    });
   });
 
   // Добавляем NFT
@@ -82,14 +97,28 @@ db.serialize(() => {
     ['Fire Heart', '❤️‍🔥', 'epic']
   ];
   
-  nfts.forEach(nft => {
-    db.run(`INSERT OR IGNORE INTO nfts (name, image_url, rarity) VALUES (?, ?, ?)`, nft);
+  nfts.forEach((nft, index) => {
+    db.run(`INSERT INTO nfts (name, image_url, rarity) VALUES (?, ?, ?)`, nft, function(err) {
+      if (err) {
+        console.error('Error inserting NFT:', err.message);
+      }
+    });
+  });
+
+  // Создаем тестового пользователя
+  bcrypt.hash('test123', 10, (err, hash) => {
+    db.run(`INSERT INTO users (username, password, nickname) 
+            VALUES ('test', ?, 'Тестовый пользователь')`, [hash]);
   });
 });
 
 // API маршруты
 app.post('/api/register', async (req, res) => {
   const { username, password, nickname } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
   
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -114,6 +143,7 @@ app.post('/api/register', async (req, res) => {
       });
     });
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(500).json({ error: 'Registration failed' });
   }
 });
@@ -121,7 +151,16 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+  
   db.get(`SELECT * FROM users WHERE username = ?`, [username], async (err, user) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
@@ -132,7 +171,7 @@ app.post('/api/login', (req, res) => {
         return res.status(401).json({ error: 'Invalid password' });
       }
       
-      const token = jwt.sign({ id: user.id, username }, 'broke_secret');
+      const token = jwt.sign({ id: user.id, username: user.username }, 'broke_secret');
       
       res.json({ 
         token, 
@@ -146,6 +185,7 @@ app.post('/api/login', (req, res) => {
         }
       });
     } catch (error) {
+      console.error('Login error:', error);
       res.status(500).json({ error: 'Login failed' });
     }
   });
@@ -156,22 +196,44 @@ app.get('/api/user/:username', (req, res) => {
   
   db.get(`SELECT id, username, nickname, avatar, bio, admin_id FROM users WHERE username = ?`,
     [username], (err, user) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
     
+    // Получаем NFT пользователя
     db.all(`SELECT nfts.* FROM user_nfts 
             JOIN nfts ON user_nfts.nft_id = nfts.id 
             WHERE user_nfts.user_id = ?`, [user.id], (err, nfts) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
       user.nfts = nfts || [];
       res.json(user);
     });
   });
 });
 
+// NFT API
+app.get('/api/nfts', (req, res) => {
+  db.all(`SELECT * FROM nfts`, [], (err, nfts) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(nfts);
+  });
+});
+
 // Socket.IO
 io.on('connection', (socket) => {
-  console.log('User connected');
+  console.log('User connected:', socket.id);
   
   socket.on('authenticate', (token) => {
     try {
@@ -179,6 +241,7 @@ io.on('connection', (socket) => {
       socket.userId = user.id;
       socket.username = user.username;
       socket.join(`user_${user.id}`);
+      console.log(`User ${user.username} authenticated`);
     } catch (err) {
       console.log('Invalid token');
     }
@@ -189,18 +252,21 @@ io.on('connection', (socket) => {
     
     db.run(`INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)`,
       [socket.userId, receiver_id, content], function(err) {
-        if (!err) {
-          const message = {
-            id: this.lastID,
-            sender_id: socket.userId,
-            receiver_id,
-            content,
-            timestamp: new Date().toISOString()
-          };
-          
-          io.to(`user_${receiver_id}`).emit('new_message', message);
-          socket.emit('message_sent', message);
+        if (err) {
+          console.error('Error saving message:', err);
+          return;
         }
+        
+        const message = {
+          id: this.lastID,
+          sender_id: socket.userId,
+          receiver_id,
+          content,
+          timestamp: new Date().toISOString()
+        };
+        
+        io.to(`user_${receiver_id}`).emit('new_message', message);
+        socket.emit('message_sent', message);
       });
   });
   
@@ -208,33 +274,52 @@ io.on('connection', (socket) => {
     const { receiver_username, nft_id } = data;
     
     db.get(`SELECT id FROM users WHERE username = ?`, [receiver_username], (err, receiver) => {
-      if (receiver) {
-        db.run(`INSERT INTO user_nfts (user_id, nft_id, sender_id) VALUES (?, ?, ?)`,
-          [receiver.id, nft_id, socket.userId], function(err) {
-            if (!err) {
-              io.to(`user_${receiver.id}`).emit('nft_received', {
-                nft_id,
-                sender_id: socket.userId
-              });
-              
-              socket.emit('nft_sent', { success: true });
-            }
-          });
+      if (err) {
+        console.error('Database error:', err);
+        return;
       }
+      
+      if (!receiver) {
+        socket.emit('nft_error', { error: 'User not found' });
+        return;
+      }
+      
+      db.run(`INSERT INTO user_nfts (user_id, nft_id, sender_id) VALUES (?, ?, ?)`,
+        [receiver.id, nft_id, socket.userId], function(err) {
+          if (err) {
+            console.error('Error saving NFT:', err);
+            socket.emit('nft_error', { error: 'Failed to send NFT' });
+            return;
+          }
+          
+          io.to(`user_${receiver.id}`).emit('nft_received', {
+            nft_id,
+            sender_id: socket.userId,
+            timestamp: new Date().toISOString()
+          });
+          
+          socket.emit('nft_sent', { success: true });
+        });
     });
   });
   
   socket.on('disconnect', () => {
-    console.log('User disconnected');
+    console.log('User disconnected:', socket.id);
   });
 });
 
-// Статический сервер для index.html
+// Все остальные запросы отправляют index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 server.listen(3000, () => {
-  console.log('BROKE Messenger запущен на http://localhost:3000');
-  console.log('Логин админа: admin, пароль: 565811');
+  console.log('=================================');
+  console.log('BROKE Messenger запущен!');
+  console.log('Адрес: http://localhost:3000');
+  console.log('=================================');
+  console.log('Тестовые аккаунты:');
+  console.log('Админ: логин - admin, пароль - 565811');
+  console.log('Пользователь: логин - test, пароль - test123');
+  console.log('=================================');
 });
