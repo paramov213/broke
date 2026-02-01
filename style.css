@@ -1,10 +1,19 @@
-:root { --accent: #0088cc; --bg: #0b0e11; }
-body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; }
-.screen { display: flex; height: 100vh; }
-.hidden { display: none; }
-.glass-card { background: rgba(255,255,255,0.05); padding: 30px; border-radius: 20px; backdrop-filter: blur(10px); margin: auto; }
-.side-bar { width: 200px; background: #151a21; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-.btn { background: var(--accent); border: none; color: white; padding: 10px; border-radius: 8px; cursor: pointer; }
-.nft-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.nft-item { width: 100%; border-radius: 10px; box-shadow: 0 0 10px var(--accent); animation: glow 2s infinite; }
-@keyframes glow { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
+:root { --accent: #0088cc; --bg: #0b0e11; --card: #1c2128; --text: #f0f6fc; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; }
+.hidden { display: none !important; }
+#app { display: flex; height: 100vh; }
+
+.sidebar { width: 250px; background: var(--card); padding: 20px; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid #30363d; }
+.sidebar button { background: transparent; border: none; color: var(--text); text-align: left; padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+.sidebar button:hover { background: #30363d; }
+
+.main-content { flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px; }
+.glass-card { background: rgba(255,255,255,0.05); padding: 40px; border-radius: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); width: 350px; text-align: center; }
+
+input { width: 100%; padding: 12px; margin: 10px 0; background: #0d1117; border: 1px solid #30363d; color: white; border-radius: 8px; box-sizing: border-box; }
+.main-btn { width: 100%; padding: 12px; background: var(--accent); border: none; color: white; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+.avatar-large { width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--accent); }
+.badge { background: #238636; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; }
+.nft-list { display: grid; grid-template-columns: repeat(auto-fill, 80px); gap: 10px; margin-top: 20px; }
+.nft-item { width: 80px; height: 80px; border-radius: 10px; box-shadow: 0 0 10px var(--accent); }
