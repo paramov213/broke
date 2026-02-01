@@ -1,57 +1,50 @@
 :root {
     --tg-bg: #0e1621;
-    --tg-side: #17212b;
+    --tg-sidebar: #17212b;
     --tg-active: #2b5278;
-    --tg-text: #f5f5f5;
-    --tg-sub: #708499;
-    --tg-input: #1b2633;
+    --tg-blue: #549ed9;
+    --tg-border: #0e1117;
 }
 
-body { background: var(--tg-bg); color: var(--tg-text); font-family: -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; }
-.hidden { display: none !important; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--tg-bg); color: #fff; overflow: hidden; }
 
-/* Весь экран приложения */
-#app { display: flex; height: 100vh; width: 100vw; }
+/* Основной контейнер */
+#app-container { display: flex; width: 100vw; height: 100vh; }
 
-/* Левая колонка (Список чатов) */
-.sidebar {
-    width: 320px;
-    background: var(--tg-side);
-    border-right: 1px solid #000;
-    display: flex;
-    flex-direction: column;
-}
+/* Левая панель */
+.tg-left { width: 400px; background: var(--tg-sidebar); border-right: 1px solid var(--tg-border); display: flex; flex-direction: column; }
+.tg-header { padding: 10px 15px; display: flex; align-items: center; gap: 15px; }
+.burger-icon { cursor: pointer; color: #6c7883; font-size: 20px; }
+.search-input { flex: 1; background: #242f3d; border: 1px solid #242f3d; padding: 10px 15px; border-radius: 22px; color: #fff; outline: none; transition: 0.2s; }
+.search-input:focus { border-color: var(--tg-blue); }
 
-.search-container { padding: 10px; background: var(--tg-side); }
-.tg-search { width: 100%; padding: 8px; border-radius: 5px; border: none; background: #242f3d; color: white; }
+/* Списки чатов */
+.tabs { display: flex; padding: 0 15px; border-bottom: 2px solid #111; }
+.tab { padding: 12px 15px; color: #708499; cursor: pointer; font-weight: 500; font-size: 14px; }
+.tab.active { color: var(--tg-blue); border-bottom: 2px solid var(--tg-blue); }
 
-/* Список контактов */
-#chat-list { flex: 1; overflow-y: auto; }
-.chat-item {
-    padding: 10px 15px;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    transition: background 0.2s;
-}
+.chat-list { flex: 1; overflow-y: auto; }
+.chat-item { padding: 10px 15px; display: flex; align-items: center; gap: 12px; transition: 0.2s; cursor: pointer; }
 .chat-item:hover { background: #202b36; }
 .chat-item.active { background: var(--tg-active); }
-.chat-avatar { width: 45px; height: 45px; border-radius: 50%; margin-right: 15px; background: #517da2; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+.avatar { width: 54px; height: 54px; border-radius: 50%; background: #517da2; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; }
 
-/* Правая колонка (Окно чата) */
-.main-viewport { flex: 1; display: flex; flex-direction: column; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; }
+/* Правая панель */
+.tg-main { flex: 1; display: flex; flex-direction: column; position: relative; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; }
+.chat-info-bar { height: 60px; background: var(--tg-sidebar); display: flex; align-items: center; padding: 0 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.3); z-index: 5; }
 
-.chat-header { height: 55px; background: var(--tg-side); display: flex; align-items: center; padding: 0 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-.messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-.msg-bubble { max-width: 70%; padding: 8px 12px; border-radius: 12px; font-size: 14px; position: relative; }
-.msg-in { background: #182533; align-self: flex-start; border-bottom-left-radius: 2px; }
-.msg-out { background: var(--tg-active); align-self: flex-end; border-bottom-right-radius: 2px; }
+/* Сообщения */
+.messages-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 4px; }
+.bubble { max-width: 480px; padding: 8px 12px; border-radius: 12px; font-size: 15px; line-height: 1.4; position: relative; }
+.in { background: #182533; align-self: flex-start; border-bottom-left-radius: 4px; }
+.out { background: var(--tg-active); align-self: flex-end; border-bottom-right-radius: 4px; }
+.time { font-size: 11px; color: #6c7883; float: right; margin: 5px 0 0 10px; }
 
-/* Панель ввода */
-.input-panel { padding: 10px 20px; background: var(--tg-side); display: flex; gap: 15px; align-items: center; }
-.tg-input { flex: 1; background: transparent; border: none; color: white; font-size: 15px; outline: none; }
+/* Поле ввода */
+.input-container { padding: 10px 20px 20px; display: flex; align-items: flex-end; gap: 10px; }
+.input-wrapper { flex: 1; background: var(--tg-sidebar); border-radius: 12px; padding: 10px 15px; display: flex; align-items: center; }
+.tg-msg-input { flex: 1; background: transparent; border: none; color: #fff; outline: none; font-size: 16px; min-height: 24px; }
 
-/* Нижнее меню (фичи) */
-.bottom-nav { height: 50px; border-top: 1px solid #111; display: flex; justify-content: space-around; background: var(--tg-side); }
-.nav-icon { background: none; border: none; color: var(--tg-sub); cursor: pointer; font-size: 20px; }
-.nav-icon.active { color: #51a2e8; }
+/* Боковое меню */
+.drawer { position: absolute; left: -300px; width: 300px; height: 100%; background: var(--tg-sidebar); z-index: 100; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 10px 0 20px rgba(0,0,0,0.5); }
+.drawer.active { left: 0; }
