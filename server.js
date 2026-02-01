@@ -10,61 +10,49 @@ const io = new Server(server);
 app.use(express.static(__dirname));
 
 let users = {
-    "admin": { password: "565811", nickname: "Основатель", bio: "Admin Root", nft: [], id: "001", avatar: "https://cdn-icons-png.flaticon.com/512/714/714424.png", subs: 0, views: 0 }
+    "admin": { password: "565811", nickname: "Admin Root", nft: [], id: "001", subs: 0, views: 0 }
 };
-let channels = {};
 
 io.on('connection', (socket) => {
-    // Авторизация и Авто-вход
     socket.on('auth', (data) => {
         if (!users[data.username]) {
-            users[data.username] = { 
-                password: data.password, nickname: data.username, 
-                bio: "Статус BROKE", nft: [], id: null, 
-                avatar: `https://ui-avatars.com/api/?name=${data.username}`,
-                subs: 0, views: 0 
-            };
+            users[data.username] = { password: data.password, nickname: data.username, nft: [], id: null, subs: 0, views: 0 };
         }
         if (users[data.username].password === data.password) {
-            socket.join(data.username);
+            socket.join(data.username); // Входим в личную комнату для получения ЛС
             socket.emit('auth_success', { ...users[data.username], username: data.username });
+        }
+    });
+
+    // Поиск пользователя для переписки
+    socket.on('find_user', (target) => {
+        if (users[target]) {
+            socket.emit('search_result', { username: target, nickname: users[target].nickname });
         } else {
-            socket.emit('auth_error', 'Ошибка входа');
+            socket.emit('search_result', null);
         }
     });
 
-    // Поиск
-    socket.on('search_user', (username) => {
-        const found = users[username];
-        socket.emit('search_result', found ? { ...found, username } : null);
+    // Отправка личного сообщения
+    socket.on('private_msg', (data) => {
+        // Отправляем сообщение и получателю, и себе (для отображения в чате)
+        io.to(data.to).to(data.from).emit('msg_receive', data);
     });
 
-    // NFT Подарки
-    socket.on('send_nft', (data) => {
-        if (users[data.to]) {
-            users[data.to].nft.push(data.nftUrl);
-            io.to(data.to).emit('update_profile', users[data.to]);
-            socket.emit('toast', 'Подарок отправлен!');
-        }
-    });
-
-    // Каналы
-    socket.on('create_channel', (data) => {
-        channels[data.tag] = { name: data.name, owner: data.owner, subs: 0, views: 0, posts: [] };
-        io.emit('new_channel_alert', data.tag);
-    });
-
-    // Админ-действия
+    // Исправленная Админ-панель
     socket.on('admin_action', (data) => {
-        const t = users[data.target];
-        if (t) {
-            if (data.type === 'gift_nft') t.nft.push(data.val);
-            if (data.type === 'set_id') t.id = data.val;
-            if (data.type === 'boost_subs') t.subs += parseInt(data.val);
-            io.to(data.target).emit('update_profile', t);
+        if (data.adminPass === '565811') {
+            const t = users[data.target];
+            if (t) {
+                if (data.type === 'gift_nft') t.nft.push(data.val);
+                if (data.type === 'set_id') t.id = data.val;
+                if (data.type === 'boost_subs') t.subs += parseInt(data.val || 0);
+                
+                io.to(data.target).emit('update_profile', t); // Обновляем данные у цели в реальном времени
+                socket.emit('toast', 'Успешно применено!');
+            }
         }
     });
 });
 
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, '0.0.0.0', () => console.log(`BROKE OS LIVE`));
+server.listen(10000, '0.0.0.0');
