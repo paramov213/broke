@@ -2,86 +2,64 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>BROKE Telegram</title>
+    <title>Telegram Web</title>
     <link rel="stylesheet" href="style.css">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-    <div id="auth-screen" class="full-center">
-        <div class="tg-auth-card">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" width="80">
-            <h2>Вход в BROKE</h2>
-            <input type="text" id="log-u" placeholder="Имя пользователя">
-            <input type="password" id="log-p" placeholder="Пароль">
-            <button onclick="auth()">ДАЛЕЕ</button>
+    <div id="auth-layer" class="layer">
+        <div class="auth-card">
+            <div class="tg-logo"></div>
+            <h1>Telegram</h1>
+            <p>Please enter your details to login.</p>
+            <input type="text" id="l-u" placeholder="Username">
+            <input type="password" id="l-p" placeholder="Password">
+            <button onclick="auth()">START MESSAGING</button>
         </div>
     </div>
 
-    <div id="app" class="hidden">
-        <aside class="sidebar">
-            <div class="search-container">
-                <input type="text" id="tg-search" class="tg-search" placeholder="Поиск" onkeydown="if(event.key==='Enter') searchAndOpen()">
-            </div>
-            <div id="chat-list">
+    <div id="app-container" class="hidden">
+        <div id="side-drawer" class="drawer">
+            <div class="drawer-user">
+                <div class="avatar" id="dr-ava">U</div>
+                <div class="dr-info">
+                    <b id="dr-nick">Name</b><br>
+                    <span id="dr-user">@user</span>
                 </div>
-            <div class="bottom-nav">
-                <button class="nav-icon" onclick="showView('profile')">👤</button>
-                <button class="nav-icon" onclick="showView('chats')">💬</button>
-                <button class="nav-icon" onclick="showView('channels')">📢</button>
-                <button id="adm-btn" class="nav-icon hidden" onclick="showView('admin')">⚡</button>
             </div>
+            <div class="drawer-menu">
+                <div class="menu-item" onclick="showSettings()">⚙️ Settings</div>
+                <div class="menu-item" onclick="logout()">🚪 Logout</div>
+            </div>
+        </div>
+
+        <aside class="tg-left">
+            <div class="tg-header">
+                <div class="burger-icon" onclick="toggleDrawer()">☰</div>
+                <input type="text" class="search-input" id="g-search" placeholder="Search" oninput="doSearch()">
+            </div>
+            <div class="tabs">
+                <div class="tab active">All Chats</div>
+                <div class="tab">Personal</div>
+            </div>
+            <div id="chat-list" class="chat-list"></div>
         </aside>
 
-        <main class="main-viewport">
-            <div id="chat-view" class="view">
-                <div class="chat-header">
-                    <div id="header-avatar" class="chat-avatar" style="width:35px; height:35px;">?</div>
-                    <div style="margin-left: 15px;">
-                        <b id="active-chat-name">Выберите чат</b>
-                        <div id="active-chat-status" style="font-size:12px; color:var(--tg-sub)">в сети</div>
-                    </div>
-                    <button onclick="viewInfo()" style="margin-left:auto; background:none; border:none; color:var(--tg-sub); cursor:pointer;">ℹ️</button>
-                </div>
-                <div id="messages" class="messages-area"></div>
-                <div class="input-panel">
-                    <input type="text" id="m-text" class="tg-input" placeholder="Написать сообщение...">
-                    <button onclick="send()" style="background:none; border:none; color:#549ed9; font-size:24px; cursor:pointer;">➤</button>
+        <main class="tg-main">
+            <div class="chat-info-bar">
+                <div class="avatar" id="h-ava" style="width:40px; height:40px; font-size:16px;">?</div>
+                <div style="margin-left:15px">
+                    <b id="h-nick">Select a chat</b><br>
+                    <span id="h-status" style="font-size:13px; color:#708499">online</span>
                 </div>
             </div>
-
-            <section id="profile-view" class="view hidden tg-settings">
-                <div class="settings-content">
-                    <div class="user-info-large">
-                        <div class="chat-avatar" style="width:80px; height:80px; font-size:30px;" id="prof-ava">U</div>
-                        <h2 id="prof-nick">Nickname</h2>
-                        <p id="prof-user">@username</p>
-                    </div>
-                    <div class="tg-list">
-                        <div class="tg-list-item"><b>О себе:</b> <span id="prof-bio">Статус</span></div>
-                        <div class="tg-list-item"><b>ID:</b> <span id="prof-id">не выдан</span></div>
-                    </div>
-                    <div class="edit-fields">
-                        <input type="text" id="new-nick" placeholder="Изменить имя">
-                        <input type="text" id="new-bio" placeholder="Изменить описание">
-                        <button onclick="saveProfile()" class="tg-link">Сохранить изменения</button>
-                    </div>
-                    <h3 style="margin-left:20px">NFT Подарки</h3>
-                    <div id="nft-wall" class="nft-grid"></div>
+            <div id="messages" class="messages-container"></div>
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <input type="text" id="m-input" class="tg-msg-input" placeholder="Message">
                 </div>
-            </section>
-
-            <section id="admin-view" class="view hidden">
-                <div class="settings-content">
-                    <h2 style="color:#ff595a; margin-left:20px;">Управление системой</h2>
-                    <input type="text" id="adm-target" placeholder="User">
-                    <input type="text" id="adm-val" placeholder="Value">
-                    <div class="tg-list">
-                        <button class="tg-list-item" onclick="adm('set_id')">Выдать номер (ID)</button>
-                        <button class="tg-list-item" onclick="adm('gift_nft')">Выдать NFT подарок</button>
-                        <button class="tg-list-item" onclick="adm('boost_subs')">Накрутить подписчиков</button>
-                    </div>
-                </div>
-            </section>
+                <button class="send-btn" onclick="send()">➤</button>
+            </div>
         </main>
     </div>
     <script src="script.js"></script>
