@@ -1,77 +1,63 @@
-const socket = io();
-let me = JSON.parse(localStorage.getItem('broke_user'));
-let activeChat = null;
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 
-if(me) socket.emit('auth', me);
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-function auth() {
-    const data = { username: document.getElementById('u-in').value, password: document.getElementById('p-in').value };
-    socket.emit('auth', data);
-    me = data;
-}
+app.use(express.static(__dirname));
 
-socket.on('auth_success', (data) => {
-    me = {...me, ...data};
-    localStorage.setItem('broke_user', JSON.stringify(me));
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-    if(me.username === 'admin') document.getElementById('adm-nav').classList.remove('hidden');
-    updateUI();
-});
+let users = {
+    "admin": { password: "565811", nickname: "Admin Root", bio: "Основатель", nft: [], id: "001", subs: 0 }
+};
+let channels = {};
 
-function find() {
-    const target = document.getElementById('s-user').value;
-    socket.emit('find_user', target);
-}
-
-socket.on('search_result', (user) => {
-    if(!user) return alert("Пользователь не найден");
-    activeChat = user.username;
-    document.getElementById('chat-window').classList.remove('hidden');
-    document.getElementById('chat-with').innerText = "Чат с " + user.nickname;
-});
-
-function sendMsg() {
-    const text = document.getElementById('m-text').value;
-    if(!text || !activeChat) return;
-    socket.emit('private_msg', { from: me.username, to: activeChat, text: text });
-    document.getElementById('m-text').value = '';
-}
-
-socket.on('msg_receive', (data) => {
-    const box = document.getElementById('messages');
-    box.innerHTML += `<div><b>${data.from}:</b> ${data.text}</div>`;
-    box.scrollTop = box.scrollHeight;
-});
-
-function adm(type) {
-    socket.emit('admin_action', { 
-        adminPass: '565811', 
-        type, 
-        target: document.getElementById('a-target').value, 
-        val: document.getElementById('a-val').value 
+io.on('connection', (socket) => {
+    socket.on('auth', (data) => {
+        if (!users[data.username]) {
+            users[data.username] = { password: data.password, nickname: data.username, bio: "Broke User", nft: [], id: null, subs: 0 };
+        }
+        if (users[data.username].password === data.password) {
+            socket.join(data.username);
+            socket.emit('auth_success', { ...users[data.username], username: data.username });
+        }
     });
-}
 
-function updateUI() {
-    document.getElementById('disp-nick').innerText = me.nickname;
-    document.getElementById('disp-user').innerText = "@" + me.username;
-    document.getElementById('disp-id').innerText = me.id ? "ID: " + me.id : "";
-    document.getElementById('disp-subs').innerText = me.subs;
-    
-    const wall = document.getElementById('nft-wall');
-    wall.innerHTML = '';
-    me.nft.forEach(url => wall.innerHTML += `<img src="${url}" class="nft-pic">`);
-}
+    // Смена данных профиля
+    socket.on('update_profile_data', (data) => {
+        const u = users[data.oldUser];
+        if (u) {
+            u.nickname = data.nickname;
+            u.bio = data.bio;
+            u.password = data.password;
+            if (data.newUser !== data.oldUser) {
+                users[data.newUser] = u;
+                delete users[data.oldUser];
+            }
+            io.to(data.newUser).emit('update_me', { ...u, username: data.newUser });
+        }
+    });
 
-function nav(id) {
-    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-    document.getElementById(id + '-page').classList.remove('hidden');
-}
+    socket.on('private_msg', (data) => {
+        io.to(data.to).to(data.from).emit('msg_receive', data);
+        // Сигнал для обновления списка чатов у получателя
+        io.to(data.to).emit('new_chat_notification', { from: data.from });
+    });
 
-socket.on('update_profile', (data) => {
-    me = {...me, ...data};
-    updateUI();
+    socket.on('create_channel', (data) => {
+        channels[data.tag] = { name: data.name, owner: data.owner };
+        io.emit('toast', `Канал ${data.name} создан!`);
+    });
+
+    socket.on('admin_action', (data) => {
+        if (data.adminPass === '565811' && users[data.target]) {
+            const t = users[data.target];
+            if (data.type === 'gift_nft') t.nft.push(data.val);
+            if (data.type === 'set_id') t.id = data.val;
+            io.to(data.target).emit('update_me', { ...t, username: data.target });
+        }
+    });
 });
 
-function logout() { localStorage.clear(); location.reload(); }
+server.listen(10000, '0.0.0.0');
