@@ -15,7 +15,10 @@ let users = {
 io.on('connection', (socket) => {
     socket.on('auth', (data) => {
         if (!users[data.username]) {
-            users[data.username] = { password: data.password, nickname: data.username, bio: "", avatar: data.username[0].toUpperCase(), id: Math.floor(Math.random()*999) };
+            users[data.username] = { 
+                password: data.password, nickname: data.username, 
+                bio: "Using BROKE", avatar: data.username[0].toUpperCase(), id: Math.floor(Math.random()*900)+100 
+            };
         }
         if (users[data.username].password === data.password) {
             socket.join(data.username);
@@ -24,14 +27,15 @@ io.on('connection', (socket) => {
     });
 
     socket.on('search_global', (query) => {
-        const results = Object.keys(users)
+        const found = Object.keys(users)
             .filter(u => u.includes(query))
             .map(u => ({ username: u, nickname: users[u].nickname, avatar: users[u].avatar }));
-        socket.emit('search_results', results);
+        socket.emit('search_results', found);
     });
 
     socket.on('send_msg', (data) => {
-        io.to(data.to).to(data.from).emit('render_msg', data);
+        const msg = { ...data, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
+        io.to(data.to).to(data.from).emit('render_msg', msg);
     });
 });
 
