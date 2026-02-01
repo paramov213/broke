@@ -1,1 +1,13 @@
-"start": "node server.js"
+{
+  "name": "broke-messenger",
+  "version": "1.0.0",
+  "description": "Messenger BROKE",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
