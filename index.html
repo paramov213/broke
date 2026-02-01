@@ -1,59 +1,100 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BROKE Messenger</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app-container">
-        <div class="auth-container">
-            <div class="logo-container">
-                <div class="logo">
+    <div id="app">
+        <!-- Авторизация -->
+        <div id="auth-screen" class="screen active">
+            <div class="logo">
+                <div class="logo-icon">
                     <i class="fas fa-bolt"></i>
-                    <h1>BROKE</h1>
                 </div>
-                <p class="tagline">Messenger for the bold</p>
+                <h1>BROKE</h1>
+                <p class="subtitle">Messenger for the bold</p>
             </div>
             
-            <div class="auth-form" id="loginForm">
-                <h2>Welcome Back</h2>
-                <div class="input-group">
-                    <i class="fas fa-user"></i>
-                    <input type="text" id="loginUsername" placeholder="Username" required>
-                </div>
-                <div class="input-group">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="loginPassword" placeholder="Password" required>
-                </div>
-                <button class="btn-primary" onclick="login()">Sign In</button>
-                <p class="auth-switch">New to BROKE? <a href="#" onclick="showRegister()">Create account</a></p>
+            <div class="auth-tabs">
+                <button class="tab-btn active" onclick="showTab('login')">Вход</button>
+                <button class="tab-btn" onclick="showTab('register')">Регистрация</button>
             </div>
             
-            <div class="auth-form" id="registerForm" style="display: none;">
-                <h2>Join BROKE</h2>
-                <div class="input-group">
-                    <i class="fas fa-at"></i>
-                    <input type="text" id="regUsername" placeholder="Choose username" required>
+            <div id="login-form" class="auth-form">
+                <input type="text" id="login-username" placeholder="Имя пользователя" value="admin">
+                <input type="password" id="login-password" placeholder="Пароль" value="565811">
+                <button class="btn primary" onclick="login()">Войти</button>
+            </div>
+            
+            <div id="register-form" class="auth-form" style="display: none;">
+                <input type="text" id="reg-username" placeholder="Имя пользователя">
+                <input type="text" id="reg-nickname" placeholder="Ваше имя">
+                <input type="password" id="reg-password" placeholder="Пароль">
+                <button class="btn primary" onclick="register()">Создать аккаунт</button>
+            </div>
+        </div>
+        
+        <!-- Главное приложение -->
+        <div id="main-screen" class="screen">
+            <div class="sidebar">
+                <div class="user-info">
+                    <div class="avatar" id="user-avatar">U</div>
+                    <div class="user-details">
+                        <span id="user-nickname">User</span>
+                        <span class="username" id="user-username">@user</span>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <i class="fas fa-user-circle"></i>
-                    <input type="text" id="regNickname" placeholder="Nickname" required>
+                
+                <div class="menu">
+                    <div class="menu-item active" onclick="showSection('chats')">
+                        <i class="fas fa-comments"></i>
+                        <span>Чаты</span>
+                    </div>
+                    <div class="menu-item" onclick="showSection('search')">
+                        <i class="fas fa-search"></i>
+                        <span>Поиск</span>
+                    </div>
+                    <div class="menu-item" onclick="showSection('channels')">
+                        <i class="fas fa-broadcast-tower"></i>
+                        <span>Каналы</span>
+                    </div>
+                    <div class="menu-item" onclick="showSection('nft')">
+                        <i class="fas fa-gem"></i>
+                        <span>NFT Подарки</span>
+                    </div>
+                    <div class="menu-item" onclick="showSection('profile')">
+                        <i class="fas fa-user"></i>
+                        <span>Профиль</span>
+                    </div>
+                    <div id="admin-menu" class="menu-item" style="display: none;" onclick="showSection('admin')">
+                        <i class="fas fa-crown"></i>
+                        <span>Админ-панель</span>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="regPassword" placeholder="Password" required>
+                
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Выйти</span>
+                </button>
+            </div>
+            
+            <div class="main-content">
+                <div class="content-header">
+                    <h2 id="content-title">Чаты</h2>
                 </div>
-                <button class="btn-primary" onclick="register()">Create Account</button>
-                <p class="auth-switch">Already have an account? <a href="#" onclick="showLogin()">Sign In</a></p>
+                
+                <div class="content-body" id="content-body">
+                    <!-- Контент будет загружаться динамически -->
+                </div>
             </div>
         </div>
     </div>
     
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
