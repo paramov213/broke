@@ -3,39 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram iOS Fix</title>
+    <title>Telegram Pro</title>
     <link rel="stylesheet" href="style.css">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body class="ios-dark">
-    <div id="auth-layer" class="ios-layer">
-        <div class="auth-card">
-            <h2>Вход в Telegram</h2>
-            <input type="text" id="l-u" placeholder="Имя пользователя">
-            <input type="password" id="l-p" placeholder="Пароль">
+    <div id="auth-layer" class="overlay">
+        <div class="auth-box">
+            <h2>Telegram</h2>
+            <input type="text" id="l-u" placeholder="Username">
+            <input type="password" id="l-p" placeholder="Password">
             <button onclick="auth()">Войти</button>
         </div>
     </div>
 
     <div id="app" class="hidden">
         <div id="drawer" class="ios-drawer">
-            <div class="dr-header" onclick="view('profile')">
+            <div class="dr-header" onclick="openView('profile')">
                 <div class="ava-l" id="my-ava">?</div>
-                <div class="dr-meta">
-                    <b id="dr-name">Загрузка...</b>
-                    <span id="dr-user">@user</span>
+                <div class="dr-info">
+                    <b id="dr-name">Имя</b><br>
+                    <span id="dr-user">@username</span>
                 </div>
             </div>
             <div class="ios-list">
-                <div class="ios-item" onclick="view('profile')">👤 Мой профиль</div>
-                <div class="ios-item" onclick="view('wallet')">👛 Кошелёк <span class="badge">НОВОЕ</span></div>
+                <div class="ios-item" onclick="openView('profile')">👤 Мой профиль</div>
+                <div class="ios-item" onclick="openView('wallet')">👛 Кошелёк <span class="badge">TON</span></div>
                 <hr>
-                <div class="ios-item" onclick="view('group')">👥 Создать группу</div>
-                <div class="ios-item" onclick="view('channel')">📢 Создать канал</div>
-                <div class="ios-item" onclick="view('contacts')">👤 Контакты</div>
-                <div class="ios-item" onclick="view('calls')">📞 Звонки</div>
-                <div class="ios-item" onclick="view('saved')">🔖 Избранное</div>
-                <div class="ios-item" onclick="view('settings')">⚙️ Настройки</div>
+                <div class="ios-item" onclick="openView('group')">👥 Создать группу</div>
+                <div class="ios-item" onclick="openView('channel')">📢 Создать канал</div>
+                <div class="ios-item" onclick="openView('contacts')">👤 Контакты</div>
+                <div class="ios-item" onclick="openView('calls')">📞 Звонки</div>
+                <div class="ios-item" onclick="openView('saved')">🔖 Избранное</div>
+                <div class="ios-item" onclick="openView('settings')">⚙️ Настройки</div>
+                <div id="adm-btn" class="ios-item hidden" onclick="openView('admin')" style="color:#ff9500">⚡ Админ-панель</div>
                 <div class="ios-item toggle-row">
                     🌙 Ночной режим
                     <input type="checkbox" checked onchange="toggleTheme()">
@@ -43,54 +44,47 @@
             </div>
         </div>
 
-        <div class="ios-main-layout">
-            <aside class="ios-sidebar">
-                <div class="ios-nav">
-                    <button class="menu-btn" onclick="toggleDr()">☰</button>
+        <div class="main-layout">
+            <aside class="sidebar">
+                <div class="nav-bar">
+                    <button class="menu-trigger" onclick="toggleDrawer()">☰</button>
                     <b>Чаты</b>
-                    <button class="edit-btn">✏️</button>
                 </div>
                 <div id="chat-list">
-                    <div class="chat-item" onclick="openChat('admin', 'Поддержка')">
+                    <div class="chat-item" onclick="selectChat('admin', 'Поддержка')">
                         <div class="ava-s">A</div>
-                        <div class="c-info"><b>Поддержка</b><p>Напишите нам...</p></div>
+                        <div class="c-text"><b>Поддержка</b><p>Нажмите, чтобы начать</p></div>
                     </div>
                 </div>
             </aside>
 
-            <main class="ios-chat">
+            <main class="chat-window">
                 <header class="chat-header">
-                    <div class="header-left">
+                    <div class="h-user">
                         <div class="ava-s" id="h-ava">?</div>
-                        <div class="h-user">
-                            <b id="h-nick">Выберите чат</b>
-                            <span id="h-status">online</span>
-                        </div>
+                        <div><b id="h-nick">Выберите чат</b><br><span id="h-status">online</span></div>
                     </div>
-                    <button class="call-btn-top" onclick="startCall()">📞</button>
+                    <button class="call-btn" onclick="startCall()">📞</button>
                 </header>
                 <div id="messages"></div>
-                <div class="ios-input">
+                <div class="input-area">
                     <button class="plus">+</button>
-                    <input type="text" id="m-input" placeholder="Сообщение">
-                    <button class="send-btn" onclick="send()">↑</button>
+                    <input type="text" id="m-input" placeholder="Сообщение" oninput="sendTyping()">
+                    <button class="send-btn" onclick="sendMsg()">↑</button>
                 </div>
             </main>
         </div>
     </div>
 
     <div id="call-screen" class="modal hidden">
-        <div class="call-box">
-            <div class="ava-huge" id="c-ava">?</div>
-            <h2 id="c-name">Имя</h2>
-            <p id="c-stat">Вызов...</p>
-            <div class="call-actions">
-                <button onclick="endCall()" class="hangup">📞</button>
-            </div>
+        <div class="call-content">
+            <div class="ava-huge">?</div>
+            <h2 id="call-user-name">Имя</h2>
+            <p>Вызов...</p>
+            <button class="end-call" onclick="endCall()">📞</button>
         </div>
     </div>
 
-    <audio id="remote-audio" autoplay></audio>
     <script src="script.js"></script>
 </body>
 </html>
